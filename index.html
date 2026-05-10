@@ -6,12 +6,12 @@
     <title>Ceda el Paso · Tiny Desk Planner</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <!-- PDF export -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <!-- Firebase SDK (compat mode for simple usage without bundler) -->
+    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 </head>
@@ -59,30 +59,6 @@
 
     <!-- ============ MAIN ============ -->
     <main class="main">
-        <!-- INFO BAR -->
-        <section class="info-bar">
-            <div class="info-item">
-                <span class="info-label">Canciones</span>
-                <span class="info-value" id="song-count">4</span>
-            </div>
-            <div class="info-item">
-                <span class="info-label">Tiempo total</span>
-                <span class="info-value" id="total-time">0:00</span>
-            </div>
-            <div class="info-item target-time">
-                <span class="info-label">Objetivo</span>
-                <span class="info-value">15-20 min</span>
-            </div>
-        </section>
-
-        <!-- TIMELINE -->
-        <section class="timeline-container">
-            <div class="timeline-bar">
-                <div class="timeline-fill" id="timeline-fill"></div>
-            </div>
-            <div class="timeline-labels" id="timeline-labels"></div>
-        </section>
-
         <!-- SETLIST -->
         <section class="setlist" id="setlist">
             <!-- Items rendered by JS -->
@@ -94,7 +70,7 @@
                 <span>＋</span> Añadir canción
             </button>
             <button id="btn-add-note" class="btn btn-secondary">
-                <span>💬</span> Añadir nota al final
+                <span>💬</span> Añadir nota
             </button>
         </div>
     </main>
@@ -106,11 +82,10 @@
             <button id="btn-exit-presentation" class="btn btn-outline">✕ Salir</button>
         </div>
         <div class="presentation-content" id="presentation-content">
-            <!-- Rendered by JS -->
         </div>
     </div>
 
-    <!-- ============ MODAL (for editing) ============ -->
+    <!-- ============ MODAL ============ -->
     <div class="modal-overlay" id="modal-overlay">
         <div class="modal" id="modal">
             <div class="modal-header">
@@ -118,7 +93,6 @@
                 <button class="modal-close" id="modal-close">✕</button>
             </div>
             <div class="modal-body" id="modal-body">
-                <!-- Dynamic content -->
             </div>
             <div class="modal-footer">
                 <button class="btn btn-secondary" id="modal-cancel">Cancelar</button>
