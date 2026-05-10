@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ceda el Paso · Tiny Desk Planner</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <!-- PDF export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- Firebase SDK (compat mode for simple usage without bundler) -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+</head>
+<body>
+    <!-- ============ HEADER ============ -->
+    <header class="header">
+        <div class="header-content">
+            <div class="header-logo">
+                <span class="header-icon">🎵</span>
+                <div>
+                    <h1 class="header-title">Ceda el Paso</h1>
+                    <p class="header-subtitle">Tiny Desk Planner</p>
+                </div>
+            </div>
+            <div class="header-actions">
+                <button id="btn-save" class="btn btn-save" title="Guardar para todos">
+                    <span class="btn-icon">💾</span>
+                    <span class="btn-text">Guardar</span>
+                </button>
+                <button id="btn-presentation" class="btn btn-outline" title="Modo Presentación">
+                    <span class="btn-icon">📺</span>
+                    <span class="btn-text">Presentación</span>
+                </button>
+                <button id="btn-pdf" class="btn btn-outline" title="Exportar PDF">
+                    <span class="btn-icon">📄</span>
+                    <span class="btn-text">PDF</span>
+                </button>
+                <button id="btn-export" class="btn btn-outline" title="Exportar JSON">
+                    <span class="btn-icon">📤</span>
+                    <span class="btn-text">Exportar</span>
+                </button>
+                <button id="btn-import" class="btn btn-outline" title="Importar JSON">
+                    <span class="btn-icon">📥</span>
+                    <span class="btn-text">Importar</span>
+                </button>
+                <input type="file" id="file-import" accept=".json" style="display:none">
+            </div>
+        </div>
+        <!-- Sync status bar -->
+        <div class="sync-bar" id="sync-bar">
+            <span class="sync-dot" id="sync-dot"></span>
+            <span class="sync-text" id="sync-text">Conectando...</span>
+        </div>
+    </header>
+
+    <!-- ============ MAIN ============ -->
+    <main class="main">
+        <!-- INFO BAR -->
+        <section class="info-bar">
+            <div class="info-item">
+                <span class="info-label">Canciones</span>
+                <span class="info-value" id="song-count">4</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Tiempo total</span>
+                <span class="info-value" id="total-time">0:00</span>
+            </div>
+            <div class="info-item target-time">
+                <span class="info-label">Objetivo</span>
+                <span class="info-value">15-20 min</span>
+            </div>
+        </section>
+
+        <!-- TIMELINE -->
+        <section class="timeline-container">
+            <div class="timeline-bar">
+                <div class="timeline-fill" id="timeline-fill"></div>
+            </div>
+            <div class="timeline-labels" id="timeline-labels"></div>
+        </section>
+
+        <!-- SETLIST -->
+        <section class="setlist" id="setlist">
+            <!-- Items rendered by JS -->
+        </section>
+
+        <!-- ADD BUTTONS -->
+        <div class="add-buttons">
+            <button id="btn-add-song" class="btn btn-primary">
+                <span>＋</span> Añadir canción
+            </button>
+            <button id="btn-add-note" class="btn btn-secondary">
+                <span>💬</span> Añadir nota al final
+            </button>
+        </div>
+    </main>
+
+    <!-- ============ PRESENTATION MODE OVERLAY ============ -->
+    <div class="presentation-overlay" id="presentation-overlay">
+        <div class="presentation-header">
+            <h1>🎵 Ceda el Paso · Tiny Desk</h1>
+            <button id="btn-exit-presentation" class="btn btn-outline">✕ Salir</button>
+        </div>
+        <div class="presentation-content" id="presentation-content">
+            <!-- Rendered by JS -->
+        </div>
+    </div>
+
+    <!-- ============ MODAL (for editing) ============ -->
+    <div class="modal-overlay" id="modal-overlay">
+        <div class="modal" id="modal">
+            <div class="modal-header">
+                <h2 id="modal-title">Editar</h2>
+                <button class="modal-close" id="modal-close">✕</button>
+            </div>
+            <div class="modal-body" id="modal-body">
+                <!-- Dynamic content -->
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="modal-cancel">Cancelar</button>
+                <button class="btn btn-primary" id="modal-save">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
