@@ -14,7 +14,6 @@ const firebaseConfig = {
     appId: "1:216732565501:web:7bf09f58c5e5471746e394"
 };
 
-// Initialize Firebase
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 const setlistRef = db.ref('setlist');
@@ -23,11 +22,11 @@ const setlistRef = db.ref('setlist');
 const DEFAULT_DATA = {
     items: [
         { id: 'song-1', type: 'song', title: 'Una vez al mes', duration: 4, key: '', bpm: '', notes: '' },
-        { id: 'note-1', type: 'note', text: '💬 Presentar al grupo y agradecer la oportunidad', duration: 1 },
+        { id: 'note-1', type: 'note', text: 'Presentar al grupo y agradecer la oportunidad', duration: 1 },
         { id: 'song-2', type: 'song', title: 'Yo te quiero a ti', duration: 4, key: '', bpm: '', notes: '' },
-        { id: 'note-2', type: 'note', text: '💬 Contar la historia detrás de la siguiente canción', duration: 1 },
+        { id: 'note-2', type: 'note', text: 'Contar la historia detrás de la siguiente canción', duration: 1 },
         { id: 'song-3', type: 'song', title: 'Niña', duration: 4, key: '', bpm: '', notes: '' },
-        { id: 'note-3', type: 'note', text: '💬 Transición / comentario breve', duration: 0.5 },
+        { id: 'note-3', type: 'note', text: 'Transición / comentario breve', duration: 0.5 },
         { id: 'song-4', type: 'song', title: 'La pasta', duration: 4, key: '', bpm: '', notes: '' },
     ],
     lastUpdated: null,
@@ -39,17 +38,13 @@ let hasUnsavedChanges = false;
 let isFirstLoad = true;
 let draggedItem = null;
 let draggedEl = null;
-let touchStartY = 0;
-let touchCurrentY = 0;
 let touchClone = null;
 let songCounter = 0;
-let noteCounter = 0;
 
 // ============ INIT ============
 document.addEventListener('DOMContentLoaded', () => {
     setupGlobalListeners();
     setupFirebaseListeners();
-    // Load from localStorage as fallback while Firebase connects
     const local = loadLocalData();
     if (local) {
         data = local;
@@ -57,9 +52,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// ============ FIREBASE REALTIME SYNC ============
+// ============ FIREBASE ============
 function setupFirebaseListeners() {
-    // Connection state
     const connectedRef = db.ref('.info/connected');
     connectedRef.on('value', (snap) => {
         const dot = document.getElementById('sync-dot');
@@ -73,15 +67,13 @@ function setupFirebaseListeners() {
         }
     });
 
-    // Listen for data changes (real-time sync)
     setlistRef.on('value', (snapshot) => {
         const remoteData = snapshot.val();
         if (remoteData && remoteData.items) {
             data = remoteData;
-            saveLocalData(); // Keep local backup
+            saveLocalData();
             render();
             updateSyncStatus();
-            
             if (!isFirstLoad) {
                 showToast('🔄 Actualizado por ' + (remoteData.lastUpdatedBy || 'alguien'));
             }
@@ -89,7 +81,6 @@ function setupFirebaseListeners() {
             hasUnsavedChanges = false;
             document.body.classList.remove('has-unsaved');
         } else if (isFirstLoad) {
-            // Firebase is empty, push default data
             isFirstLoad = false;
             saveToFirebase();
         }
@@ -100,8 +91,7 @@ function saveToFirebase() {
     const dot = document.getElementById('sync-dot');
     const text = document.getElementById('sync-text');
     const saveBtn = document.getElementById('btn-save');
-    
-    // Get user name
+
     let userName = localStorage.getItem('cedaelpaso-username');
     if (!userName) {
         userName = prompt('¿Cómo te llamas? (para que el grupo sepa quién guardó)');
@@ -112,20 +102,18 @@ function saveToFirebase() {
             userName = 'Anónimo';
         }
     }
-    
-    // Update metadata
+
     data.lastUpdated = new Date().toISOString();
     data.lastUpdatedBy = userName;
-    
-    // Visual feedback
+
     dot.className = 'sync-dot saving';
     text.textContent = 'Guardando...';
     saveBtn.classList.add('saving');
-    
+
     setlistRef.set(data)
         .then(() => {
             dot.className = 'sync-dot connected';
-            text.textContent = 'Guardado ✓ — Conectado en tiempo real';
+            text.textContent = 'Guardado ✓';
             saveBtn.classList.remove('saving');
             hasUnsavedChanges = false;
             document.body.classList.remove('has-unsaved');
@@ -133,9 +121,9 @@ function saveToFirebase() {
             showToast('💾 Guardado para todos ✓');
         })
         .catch((error) => {
-            console.error('Error saving to Firebase:', error);
+            console.error('Firebase error:', error);
             dot.className = 'sync-dot disconnected';
-            text.textContent = 'Error al guardar — guardado localmente';
+            text.textContent = 'Error — guardado localmente';
             saveBtn.classList.remove('saving');
             saveLocalData();
             showToast('⚠️ Error — guardado solo localmente');
@@ -148,7 +136,7 @@ function updateSyncStatus() {
         const date = new Date(data.lastUpdated);
         const timeStr = date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
         const who = data.lastUpdatedBy || 'alguien';
-        text.textContent = `Última actualización: ${timeStr} por ${who}`;
+        text.textContent = `Última: ${timeStr} por ${who}`;
     }
 }
 
@@ -158,16 +146,11 @@ function markUnsaved() {
     saveLocalData();
 }
 
-// ============ LOCAL DATA (fallback) ============
 function loadLocalData() {
     try {
         const saved = localStorage.getItem('cedaelpaso-tinydesk');
-        if (saved) {
-            return JSON.parse(saved);
-        }
-    } catch (e) {
-        console.warn('Error loading local data:', e);
-    }
+        if (saved) return JSON.parse(saved);
+    } catch (e) { console.warn('Error:', e); }
     return null;
 }
 
@@ -178,18 +161,13 @@ function saveLocalData() {
 // ============ RENDER ============
 function render() {
     renderSetlist();
-    updateInfoBar();
-    renderTimeline();
 }
 
 function renderSetlist() {
     const container = document.getElementById('setlist');
     container.innerHTML = '';
-
     songCounter = 0;
-    noteCounter = 0;
 
-    // Initial drop zone
     container.appendChild(createDropZone(0));
 
     data.items.forEach((item, index) => {
@@ -197,13 +175,10 @@ function renderSetlist() {
             songCounter++;
             container.appendChild(createSongElement(item, index, songCounter));
         } else {
-            noteCounter++;
             container.appendChild(createNoteElement(item, index));
         }
         container.appendChild(createDropZone(index + 1));
     });
-
-    document.getElementById('song-count').textContent = data.items.filter(i => i.type === 'song').length;
 }
 
 function createSongElement(item, index, number) {
@@ -249,7 +224,7 @@ function createNoteElement(item, index) {
             <div class="item-drag-handle" title="Arrastrar">⠿</div>
             <div class="note-icon">💬</div>
             <div class="note-content">
-                <div class="note-label">Nota / Hablar</div>
+                <div class="note-label">Hablar</div>
                 <div class="note-text">${escapeHtml(item.text)}</div>
                 <div class="note-duration">⏱ ${formatDuration(item.duration)}</div>
             </div>
@@ -274,19 +249,12 @@ function createDropZone(position) {
         e.dataTransfer.dropEffect = 'move';
         dz.classList.add('active');
     });
-
-    dz.addEventListener('dragleave', () => {
-        dz.classList.remove('active');
-    });
-
+    dz.addEventListener('dragleave', () => dz.classList.remove('active'));
     dz.addEventListener('drop', (e) => {
         e.preventDefault();
         dz.classList.remove('active');
-        const fromIndex = parseInt(e.dataTransfer.getData('text/plain'));
-        const toPosition = parseInt(dz.dataset.position);
-        moveItem(fromIndex, toPosition);
+        moveItem(parseInt(e.dataTransfer.getData('text/plain')), parseInt(dz.dataset.position));
     });
-
     return dz;
 }
 
@@ -294,7 +262,6 @@ function createDropZone(position) {
 function setupDragListeners(el, index) {
     const handle = el.querySelector('.item-drag-handle');
 
-    // Desktop drag
     el.addEventListener('dragstart', (e) => {
         e.dataTransfer.setData('text/plain', index);
         e.dataTransfer.effectAllowed = 'move';
@@ -310,27 +277,14 @@ function setupDragListeners(el, index) {
         document.querySelectorAll('.drop-zone.active').forEach(dz => dz.classList.remove('active'));
     });
 
-    // Touch drag (mobile)
     handle.addEventListener('touchstart', (e) => {
         e.preventDefault();
         const touch = e.touches[0];
-        touchStartY = touch.clientY;
         draggedItem = index;
         draggedEl = el;
-
-        // Create a visual clone
         touchClone = el.cloneNode(true);
-        touchClone.style.position = 'fixed';
-        touchClone.style.width = el.offsetWidth + 'px';
-        touchClone.style.left = el.getBoundingClientRect().left + 'px';
-        touchClone.style.top = touch.clientY - 30 + 'px';
-        touchClone.style.opacity = '0.8';
-        touchClone.style.zIndex = '1000';
-        touchClone.style.pointerEvents = 'none';
-        touchClone.style.boxShadow = '0 12px 32px rgba(44,24,16,0.24)';
-        touchClone.style.transform = 'rotate(1deg)';
+        touchClone.style.cssText = `position:fixed;width:${el.offsetWidth}px;left:${el.getBoundingClientRect().left}px;top:${touch.clientY-30}px;opacity:0.8;z-index:1000;pointer-events:none;box-shadow:0 12px 32px rgba(13,27,42,0.24);transform:rotate(1deg)`;
         document.body.appendChild(touchClone);
-
         el.classList.add('dragging');
     }, { passive: false });
 
@@ -338,49 +292,23 @@ function setupDragListeners(el, index) {
         if (draggedItem === null) return;
         e.preventDefault();
         const touch = e.touches[0];
-        touchCurrentY = touch.clientY;
-
-        if (touchClone) {
-            touchClone.style.top = touch.clientY - 30 + 'px';
-        }
-
-        // Highlight drop zones
-        const dropZones = document.querySelectorAll('.drop-zone');
-        dropZones.forEach(dz => {
+        if (touchClone) touchClone.style.top = touch.clientY - 30 + 'px';
+        document.querySelectorAll('.drop-zone').forEach(dz => {
             const rect = dz.getBoundingClientRect();
-            if (touch.clientY >= rect.top - 20 && touch.clientY <= rect.bottom + 20) {
-                dz.classList.add('active');
-            } else {
-                dz.classList.remove('active');
-            }
+            dz.classList.toggle('active', touch.clientY >= rect.top - 20 && touch.clientY <= rect.bottom + 20);
         });
     }, { passive: false });
 
-    handle.addEventListener('touchend', (e) => {
+    handle.addEventListener('touchend', () => {
         if (draggedItem === null) return;
-
-        const dropZones = document.querySelectorAll('.drop-zone');
         let targetPosition = -1;
-
-        dropZones.forEach(dz => {
-            if (dz.classList.contains('active')) {
-                targetPosition = parseInt(dz.dataset.position);
-            }
+        document.querySelectorAll('.drop-zone').forEach(dz => {
+            if (dz.classList.contains('active')) targetPosition = parseInt(dz.dataset.position);
             dz.classList.remove('active');
         });
-
-        if (targetPosition >= 0) {
-            moveItem(draggedItem, targetPosition);
-        }
-
-        // Cleanup
-        if (touchClone) {
-            touchClone.remove();
-            touchClone = null;
-        }
-        if (draggedEl) {
-            draggedEl.classList.remove('dragging');
-        }
+        if (targetPosition >= 0) moveItem(draggedItem, targetPosition);
+        if (touchClone) { touchClone.remove(); touchClone = null; }
+        if (draggedEl) draggedEl.classList.remove('dragging');
         draggedItem = null;
         draggedEl = null;
     });
@@ -388,14 +316,11 @@ function setupDragListeners(el, index) {
 
 function moveItem(fromIndex, toPosition) {
     if (fromIndex === toPosition || fromIndex === toPosition - 1) return;
-
     const item = data.items.splice(fromIndex, 1)[0];
-    const newIndex = toPosition > fromIndex ? toPosition - 1 : toPosition;
-    data.items.splice(newIndex, 0, item);
-
+    data.items.splice(toPosition > fromIndex ? toPosition - 1 : toPosition, 0, item);
     markUnsaved();
     render();
-    showToast('Elemento movido — pulsa 💾 para guardar');
+    showToast('Movido — pulsa 💾');
 }
 
 // ============ EDIT / ADD / DELETE ============
@@ -410,25 +335,25 @@ function editItem(index) {
         body.innerHTML = `
             <div class="form-group">
                 <label class="form-label">Título</label>
-                <input class="form-input" id="edit-title" value="${escapeAttr(item.title)}" placeholder="Nombre de la canción">
+                <input class="form-input" id="edit-title" value="${escapeAttr(item.title)}">
             </div>
             <div class="form-row">
                 <div class="form-group">
                     <label class="form-label">Duración (min)</label>
-                    <input class="form-input" id="edit-duration" type="number" step="0.5" min="0" value="${item.duration}" placeholder="4">
+                    <input class="form-input" id="edit-duration" type="number" step="0.5" min="0" value="${item.duration}">
                 </div>
                 <div class="form-group">
                     <label class="form-label">Tonalidad</label>
-                    <input class="form-input" id="edit-key" value="${escapeAttr(item.key || '')}" placeholder="Ej: Do mayor">
+                    <input class="form-input" id="edit-key" value="${escapeAttr(item.key || '')}">
                 </div>
             </div>
             <div class="form-group">
                 <label class="form-label">BPM</label>
-                <input class="form-input" id="edit-bpm" value="${escapeAttr(item.bpm || '')}" placeholder="Ej: 120">
+                <input class="form-input" id="edit-bpm" value="${escapeAttr(item.bpm || '')}">
             </div>
             <div class="form-group">
                 <label class="form-label">Notas internas</label>
-                <textarea class="form-textarea" id="edit-notes" placeholder="Notas para el grupo...">${escapeHtml(item.notes || '')}</textarea>
+                <textarea class="form-textarea" id="edit-notes">${escapeHtml(item.notes || '')}</textarea>
             </div>
         `;
     } else {
@@ -436,18 +361,16 @@ function editItem(index) {
         body.innerHTML = `
             <div class="form-group">
                 <label class="form-label">Texto</label>
-                <textarea class="form-textarea" id="edit-text" rows="4" placeholder="¿Qué vais a decir aquí?">${escapeHtml(item.text)}</textarea>
+                <textarea class="form-textarea" id="edit-text" rows="4">${escapeHtml(item.text)}</textarea>
             </div>
             <div class="form-group">
                 <label class="form-label">Duración estimada (min)</label>
-                <input class="form-input" id="edit-note-duration" type="number" step="0.5" min="0" value="${item.duration}" placeholder="1">
+                <input class="form-input" id="edit-note-duration" type="number" step="0.5" min="0" value="${item.duration}">
             </div>
         `;
     }
 
     modal.classList.add('active');
-
-    // Save handler
     const saveBtn = document.getElementById('modal-save');
     const newSaveBtn = saveBtn.cloneNode(true);
     saveBtn.parentNode.replaceChild(newSaveBtn, saveBtn);
@@ -466,127 +389,63 @@ function editItem(index) {
         markUnsaved();
         render();
         closeModal();
-        showToast('Editado — pulsa 💾 para guardar');
+        showToast('Editado — pulsa 💾');
     });
 }
 
 function deleteItem(index) {
     const item = data.items[index];
-    const label = item.type === 'song' ? `la canción "${item.title}"` : 'esta nota';
+    const label = item.type === 'song' ? `"${item.title}"` : 'esta nota';
     if (confirm(`¿Eliminar ${label}?`)) {
         data.items.splice(index, 1);
         markUnsaved();
         render();
-        showToast('Eliminado — pulsa 💾 para guardar');
+        showToast('Eliminado — pulsa 💾');
     }
 }
 
 function addSong() {
-    const id = 'song-' + Date.now();
-    data.items.push({
-        id,
-        type: 'song',
-        title: 'Nueva canción',
-        duration: 4,
-        key: '',
-        bpm: '',
-        notes: ''
-    });
+    data.items.push({ id: 'song-' + Date.now(), type: 'song', title: 'Nueva canción', duration: 4, key: '', bpm: '', notes: '' });
     markUnsaved();
     render();
     editItem(data.items.length - 1);
 }
 
 function addNote() {
-    const id = 'note-' + Date.now();
-    data.items.push({
-        id,
-        type: 'note',
-        text: 'Escribe aquí lo que vais a decir...',
-        duration: 1
-    });
+    data.items.push({ id: 'note-' + Date.now(), type: 'note', text: 'Escribe aquí lo que vais a decir...', duration: 1 });
     markUnsaved();
     render();
     editItem(data.items.length - 1);
 }
 
-// ============ TIMELINE ============
-function updateInfoBar() {
-    const totalMin = data.items.reduce((sum, item) => sum + (item.duration || 0), 0);
-    document.getElementById('total-time').textContent = formatDuration(totalMin);
-}
-
-function renderTimeline() {
-    const totalMin = data.items.reduce((sum, item) => sum + (item.duration || 0), 0);
-    const targetMax = 20;
-    const pct = Math.min((totalMin / targetMax) * 100, 100);
-
-    const fill = document.getElementById('timeline-fill');
-    fill.style.width = pct + '%';
-    fill.classList.toggle('over-time', totalMin > targetMax);
-
-    // Labels
-    const labelsContainer = document.getElementById('timeline-labels');
-    labelsContainer.innerHTML = '';
-
-    if (totalMin === 0) return;
-
-    data.items.forEach(item => {
-        const widthPct = ((item.duration || 0) / Math.max(totalMin, targetMax)) * 100;
-        const label = document.createElement('div');
-        label.className = `timeline-label ${item.type === 'song' ? 'is-song' : 'is-note'}`;
-        label.style.width = widthPct + '%';
-        label.textContent = item.type === 'song' ? item.title : '💬';
-        label.title = `${item.type === 'song' ? item.title : item.text} — ${formatDuration(item.duration)}`;
-        labelsContainer.appendChild(label);
-    });
-}
-
-// ============ PRESENTATION MODE ============
+// ============ PRESENTATION ============
 function enterPresentation() {
     const overlay = document.getElementById('presentation-overlay');
     const content = document.getElementById('presentation-content');
-    
     let songNum = 0;
     let html = '';
 
     data.items.forEach(item => {
         if (item.type === 'song') {
             songNum++;
-            html += `
-                <div class="pres-item">
-                    <div class="pres-song">
-                        <div class="pres-number">${songNum}</div>
-                        <div class="pres-song-info">
-                            <h3>${escapeHtml(item.title)}</h3>
-                            <div class="pres-song-meta">
-                                ${formatDuration(item.duration)}
-                                ${item.key ? ` · ${escapeHtml(item.key)}` : ''}
-                                ${item.bpm ? ` · ${escapeHtml(item.bpm)} bpm` : ''}
-                            </div>
-                            ${item.notes ? `<div class="pres-song-meta" style="margin-top:6px;font-style:italic">${escapeHtml(item.notes)}</div>` : ''}
-                        </div>
-                    </div>
+            html += `<div class="pres-item"><div class="pres-song">
+                <div class="pres-number">${songNum}</div>
+                <div class="pres-song-info">
+                    <h3>${escapeHtml(item.title)}</h3>
+                    <div class="pres-song-meta">${formatDuration(item.duration)}${item.key ? ` · ${escapeHtml(item.key)}` : ''}${item.bpm ? ` · ${escapeHtml(item.bpm)} bpm` : ''}</div>
+                    ${item.notes ? `<div class="pres-song-meta" style="margin-top:6px;font-style:italic">${escapeHtml(item.notes)}</div>` : ''}
                 </div>
-            `;
+            </div></div>`;
         } else {
-            html += `
-                <div class="pres-item">
-                    <div class="pres-note">
-                        <div class="pres-note-label">Hablar — ${formatDuration(item.duration)}</div>
-                        <div class="pres-note-text">${escapeHtml(item.text)}</div>
-                    </div>
-                </div>
-            `;
+            html += `<div class="pres-item"><div class="pres-note">
+                <div class="pres-note-label">Hablar — ${formatDuration(item.duration)}</div>
+                <div class="pres-note-text">${escapeHtml(item.text)}</div>
+            </div></div>`;
         }
     });
 
     const totalMin = data.items.reduce((sum, i) => sum + (i.duration || 0), 0);
-    html += `
-        <div class="pres-item" style="text-align:center;opacity:0.5;padding-top:24px">
-            <p>Tiempo total estimado: <strong>${formatDuration(totalMin)}</strong></p>
-        </div>
-    `;
+    html += `<div class="pres-item" style="text-align:center;opacity:0.4;padding-top:24px"><p>Tiempo total: <strong>${formatDuration(totalMin)}</strong></p></div>`;
 
     content.innerHTML = html;
     overlay.classList.add('active');
@@ -619,64 +478,54 @@ function importJSON(file) {
                 data = imported;
                 markUnsaved();
                 render();
-                showToast('Datos importados — pulsa 💾 para guardar para todos');
+                showToast('Importado — pulsa 💾');
             } else {
-                alert('El archivo JSON no tiene el formato correcto.');
+                alert('Formato incorrecto.');
             }
-        } catch (err) {
-            alert('Error al leer el archivo: ' + err.message);
-        }
+        } catch (err) { alert('Error: ' + err.message); }
     };
     reader.readAsText(file);
 }
 
-// ============ PDF EXPORT ============
+// ============ PDF EXPORT (Updated styles) ============
 async function exportPDF() {
     showToast('Generando PDF...');
 
     const pdfContainer = document.createElement('div');
-    pdfContainer.style.width = '700px';
-    pdfContainer.style.padding = '30px';
-    pdfContainer.style.background = '#FDF6EC';
-    pdfContainer.style.fontFamily = 'Inter, sans-serif';
-    pdfContainer.style.color = '#2C1810';
-    pdfContainer.style.position = 'absolute';
-    pdfContainer.style.left = '-9999px';
-    pdfContainer.style.top = '0';
+    pdfContainer.style.cssText = 'width:700px;padding:30px;background:#F1F3F5;font-family:Inter,sans-serif;color:#212529;position:absolute;left:-9999px;top:0';
 
     let songNum = 0;
     let html = `
-        <div style="text-align:center;margin-bottom:24px;">
-            <div style="font-size:2rem;">🎵</div>
-            <h1 style="font-family:serif;font-size:1.8rem;margin:8px 0 4px;">Ceda el Paso</h1>
-            <p style="font-size:0.9rem;color:#8B7355;text-transform:uppercase;letter-spacing:0.1em;">Tiny Desk — Setlist</p>
-            <p style="font-size:0.8rem;color:#8B7355;margin-top:4px;">${new Date().toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+        <div style="text-align:center;margin-bottom:24px;background:#0D1B2A;padding:24px;border-radius:10px;">
+            <div style="font-size:2rem;">🎸</div>
+            <h1 style="font-family:'Permanent Marker',cursive;font-size:2.2rem;margin:8px 0 4px;color:#E63946;text-transform:uppercase;letter-spacing:0.02em;">CEDA EL PASO</h1>
+            <p style="font-size:0.8rem;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.15em;">Tiny Desk — Setlist</p>
+            <p style="font-size:0.75rem;color:rgba(255,255,255,0.4);margin-top:6px;">${new Date().toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
         </div>
-        <hr style="border:none;border-top:1px solid #E8C98A;margin:16px 0;">
     `;
 
     data.items.forEach(item => {
         if (item.type === 'song') {
             songNum++;
             html += `
-                <div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid #F0DCC0;">
-                    <div style="width:30px;height:30px;border-radius:50%;background:#D4A574;color:white;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.9rem;flex-shrink:0;">${songNum}</div>
+                <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;margin:6px 0;background:white;border-radius:10px;border-left:4px solid #E63946;">
+                    <div style="width:32px;height:32px;border-radius:50%;background:#E63946;color:white;display:flex;align-items:center;justify-content:center;font-family:'Permanent Marker',cursive;font-size:1.1rem;flex-shrink:0;">${songNum}</div>
                     <div style="flex:1;">
-                        <div style="font-size:1.05rem;font-weight:600;">${escapeHtml(item.title)}</div>
-                        <div style="font-size:0.75rem;color:#8B7355;margin-top:2px;">
+                        <div style="font-family:'Permanent Marker',cursive;font-size:1.3rem;color:#0D1B2A;text-transform:uppercase;">${escapeHtml(item.title)}</div>
+                        <div style="font-size:0.75rem;color:#6C757D;margin-top:3px;">
                             ⏱ ${formatDuration(item.duration)}
                             ${item.key ? ` · 🎹 ${escapeHtml(item.key)}` : ''}
                             ${item.bpm ? ` · ♩ ${escapeHtml(item.bpm)} bpm` : ''}
                         </div>
-                        ${item.notes ? `<div style="font-size:0.8rem;color:#8B7355;margin-top:4px;font-style:italic;">${escapeHtml(item.notes)}</div>` : ''}
+                        ${item.notes ? `<div style="font-size:0.8rem;color:#6C757D;margin-top:4px;font-style:italic;">${escapeHtml(item.notes)}</div>` : ''}
                     </div>
                 </div>
             `;
         } else {
             html += `
-                <div style="padding:10px 16px;margin:8px 0 8px 16px;background:#FFF8E7;border-left:3px solid #E8C98A;border-radius:6px;">
-                    <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:0.06em;color:#8B7355;margin-bottom:2px;">Hablar — ${formatDuration(item.duration)}</div>
-                    <div style="font-size:0.85rem;line-height:1.5;white-space:pre-wrap;">${escapeHtml(item.text)}</div>
+                <div style="padding:10px 16px;margin:6px 0 6px 20px;background:#F8F9FA;border-left:3px solid #DEE2E6;border-radius:6px;">
+                    <div style="font-size:0.6rem;text-transform:uppercase;letter-spacing:0.08em;color:#6C757D;margin-bottom:3px;font-weight:600;">Hablar — ${formatDuration(item.duration)}</div>
+                    <div style="font-size:0.85rem;line-height:1.5;color:#343A40;white-space:pre-wrap;">${escapeHtml(item.text)}</div>
                 </div>
             `;
         }
@@ -684,9 +533,9 @@ async function exportPDF() {
 
     const totalMin = data.items.reduce((sum, i) => sum + (i.duration || 0), 0);
     html += `
-        <hr style="border:none;border-top:1px solid #E8C98A;margin:16px 0;">
-        <div style="text-align:center;font-size:0.85rem;color:#8B7355;">
-            Tiempo total estimado: <strong style="color:#B8864E;">${formatDuration(totalMin)}</strong>
+        <div style="text-align:center;margin-top:20px;padding:14px;background:#0D1B2A;border-radius:10px;">
+            <span style="font-size:0.85rem;color:rgba(255,255,255,0.6);">Tiempo total: </span>
+            <span style="font-family:'Permanent Marker',cursive;font-size:1.2rem;color:#E63946;">${formatDuration(totalMin)}</span>
         </div>
     `;
 
@@ -694,12 +543,7 @@ async function exportPDF() {
     document.body.appendChild(pdfContainer);
 
     try {
-        const canvas = await html2canvas(pdfContainer, {
-            scale: 2,
-            useCORS: true,
-            backgroundColor: '#FDF6EC'
-        });
-
+        const canvas = await html2canvas(pdfContainer, { scale: 2, useCORS: true, backgroundColor: '#F1F3F5' });
         const { jsPDF } = window.jspdf;
         const pdf = new jsPDF('p', 'mm', 'a4');
         const pageWidth = pdf.internal.pageSize.getWidth();
@@ -723,8 +567,8 @@ async function exportPDF() {
         pdf.save(`CedaElPaso_TinyDesk_${getDateString()}.pdf`);
         showToast('PDF descargado ✓');
     } catch (err) {
-        console.error('Error generating PDF:', err);
-        alert('Error al generar el PDF. Intenta de nuevo.');
+        console.error('PDF error:', err);
+        alert('Error al generar el PDF.');
     } finally {
         pdfContainer.remove();
     }
@@ -735,7 +579,7 @@ function closeModal() {
     document.getElementById('modal-overlay').classList.remove('active');
 }
 
-// ============ GLOBAL LISTENERS ============
+// ============ LISTENERS ============
 function setupGlobalListeners() {
     document.getElementById('btn-save').addEventListener('click', saveToFirebase);
     document.getElementById('btn-add-song').addEventListener('click', addSong);
@@ -744,53 +588,30 @@ function setupGlobalListeners() {
     document.getElementById('btn-exit-presentation').addEventListener('click', exitPresentation);
     document.getElementById('btn-pdf').addEventListener('click', exportPDF);
     document.getElementById('btn-export').addEventListener('click', exportJSON);
-    document.getElementById('btn-import').addEventListener('click', () => {
-        document.getElementById('file-import').click();
-    });
+    document.getElementById('btn-import').addEventListener('click', () => document.getElementById('file-import').click());
     document.getElementById('file-import').addEventListener('change', (e) => {
-        if (e.target.files.length > 0) {
-            importJSON(e.target.files[0]);
-            e.target.value = '';
-        }
+        if (e.target.files.length > 0) { importJSON(e.target.files[0]); e.target.value = ''; }
     });
-
-    // Modal close
     document.getElementById('modal-close').addEventListener('click', closeModal);
     document.getElementById('modal-cancel').addEventListener('click', closeModal);
     document.getElementById('modal-overlay').addEventListener('click', (e) => {
-        if (e.target === document.getElementById('modal-overlay')) {
-            closeModal();
-        }
+        if (e.target === document.getElementById('modal-overlay')) closeModal();
     });
-
-    // Escape key
     document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-            closeModal();
-            exitPresentation();
-        }
-        // Ctrl+S / Cmd+S to save
-        if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-            e.preventDefault();
-            saveToFirebase();
-        }
+        if (e.key === 'Escape') { closeModal(); exitPresentation(); }
+        if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); saveToFirebase(); }
     });
-
-    // Warn before leaving with unsaved changes
     window.addEventListener('beforeunload', (e) => {
-        if (hasUnsavedChanges) {
-            e.preventDefault();
-            e.returnValue = 'Tienes cambios sin guardar. ¿Seguro que quieres salir?';
-        }
+        if (hasUnsavedChanges) { e.preventDefault(); e.returnValue = ''; }
     });
 }
 
 // ============ UTILS ============
 function formatDuration(min) {
     if (!min && min !== 0) return '0:00';
-    const minutes = Math.floor(min);
-    const seconds = Math.round((min - minutes) * 60);
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    const m = Math.floor(min);
+    const s = Math.round((min - m) * 60);
+    return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
 function escapeHtml(str) {
@@ -811,18 +632,10 @@ function getDateString() {
 function showToast(message) {
     const existing = document.querySelector('.toast');
     if (existing) existing.remove();
-
     const toast = document.createElement('div');
     toast.className = 'toast';
     toast.textContent = message;
     document.body.appendChild(toast);
-
-    requestAnimationFrame(() => {
-        toast.classList.add('show');
-    });
-
-    setTimeout(() => {
-        toast.classList.remove('show');
-        setTimeout(() => toast.remove(), 300);
-    }, 2500);
+    requestAnimationFrame(() => toast.classList.add('show'));
+    setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 300); }, 2500);
 }
